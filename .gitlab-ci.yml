@@ -1,0 +1,65 @@
+variables:
+  MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
+  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository"
+
+# 定义缓缓存,在各个pod自建可以共享
+# 如果gitlab runner是shell或者docker，此缓存功能没有问题
+# 如果是k8s环境，要确保已经设置了分布式文件服务作为缓存
+cache:
+  key: weailove
+  paths:
+  - .m2/repository/
+#  - target/*.jar
+
+#before_script:
+#- ls -l /
+#- ls -l .m2
+#- cp /usr/local/apache-maven-3.5.2/conf/settings.xml .m2/settings.xml
+#- ls -l .m2
+
+stages:
+- deploy-SNAPSHOT
+- deploy-release
+
+#build_maven:
+#  image: 172.29.36.94:3360/maven:3.5.2-jdk-8
+#  stage: build
+#  tags:
+#  - runner-docker-1.0  # - runner-shell-1.0 # runner本机需要完整的构建环境
+#  script:
+#  - pwd
+#  - mvn --version
+#  # - mvn $MAVEN_CLI_OPTS clean package -Dmaven.demo.skip=true
+#  - mvn clean package install -Dmaven.demo.skip=true # docker:build
+#  - ls -l .m2/repository/ # ".m2/repository/ # "target文件夹"文件夹"
+##  - ls -l target/ # "target文件夹"
+
+build_maven:
+  stage: deploy-SNAPSHOT
+  only:
+  - /^develop/*/  # 只在develop触发
+  tags:
+  - runner-shell-1.0
+  script:
+  - mvn clean package install deploy -DskipTests # docker:build
+# mvn install -Dmaven.test.skip=true
+# mvn install -DskipTests
+
+build_maven_pro:
+  stage: deploy-release
+  only:
+  - master
+  tags:
+  - runner-shell-1.0
+  script:
+  - mvn clean package install deploy -P release -DskipTests
+
+#build_maven_pro2:
+#  stage: deploy-release
+#  only:
+#  - tags/^release/*/
+#  tags:
+#  - runner-shell-1.0
+#  script:
+#  - mvn clean package install deploy -P release -DskipTests
+
